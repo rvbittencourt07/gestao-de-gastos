@@ -575,41 +575,57 @@
 
     /* LOGIN */
     .login-screen {
-      position: fixed; inset: 0;
+      position: fixed;
+      inset: 0;
       background: var(--bg);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       z-index: 300;
     }
-    .login-screen.hidden { display: none; }
+
+    .login-screen.hidden {
+      display: none;
+    }
+
     .login-box {
       background: var(--bg2);
       border: 1px solid var(--border2);
       border-radius: var(--r);
       padding: 2.5rem 2rem;
-      width: 100%; max-width: 360px;
+      width: 100%;
+      max-width: 360px;
       text-align: center;
     }
+
     .login-title {
       font-family: 'DM Serif Display', serif;
       font-size: 1.9rem;
       margin-bottom: 0.3rem;
     }
+
     .login-sub {
       font-size: 0.85rem;
       color: var(--text2);
       margin-bottom: 2rem;
     }
+
     .login-email {
       width: 100%;
       margin-bottom: 0.75rem;
       text-align: left;
     }
-    .login-btn { width: 100%; }
+
+    .login-btn {
+      width: 100%;
+    }
+
     .login-msg {
       font-size: 0.82rem;
       margin-top: 0.9rem;
       min-height: 1.1rem;
     }
+
     .nav-logout {
       margin-top: auto;
       padding-top: 1rem;
@@ -620,7 +636,7 @@
 
 <body>
   <!-- LOGIN SCREEN -->
-  <div class="login-screen" id="login-screen">
+  <div class="login-screen hidden" id="login-screen">
     <div class="login-box">
       <div class="login-title">Meus <span style="color:var(--accent)">Gastos</span></div>
       <div class="login-sub">Entre com seu e-mail para acessar</div>
