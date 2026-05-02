@@ -819,7 +819,7 @@
       const btn = document.querySelector('.login-btn');
       if (!email) { msg.style.color = 'var(--danger)'; msg.textContent = 'Digite seu e-mail.'; return; }
       btn.disabled = true; btn.textContent = 'Enviando...';
-      const { error } = await db.auth.signInWithOtp({ email });
+      const { error } = await db.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
       btn.disabled = false; btn.textContent = 'Enviar link de acesso →';
       if (error) {
         msg.style.color = 'var(--danger)'; msg.textContent = error.message;
