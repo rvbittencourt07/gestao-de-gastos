@@ -572,10 +572,65 @@
         transform: rotate(360deg);
       }
     }
+
+    /* LOGIN */
+    .login-screen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 300;
+    }
+    .login-screen.hidden { display: none; }
+    .login-box {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      padding: 2.5rem 2rem;
+      width: 100%; max-width: 360px;
+      text-align: center;
+    }
+    .login-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.9rem;
+      margin-bottom: 0.3rem;
+    }
+    .login-sub {
+      font-size: 0.85rem;
+      color: var(--text2);
+      margin-bottom: 2rem;
+    }
+    .login-email {
+      width: 100%;
+      margin-bottom: 0.75rem;
+      text-align: left;
+    }
+    .login-btn { width: 100%; }
+    .login-msg {
+      font-size: 0.82rem;
+      margin-top: 0.9rem;
+      min-height: 1.1rem;
+    }
+    .nav-logout {
+      margin-top: auto;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
   </style>
 </head>
 
 <body>
+  <!-- LOGIN SCREEN -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-box">
+      <div class="login-title">Meus <span style="color:var(--accent)">Gastos</span></div>
+      <div class="login-sub">Entre com seu e-mail para acessar</div>
+      <input class="login-email" type="email" id="login-email" placeholder="seu@email.com"
+        onkeydown="if(event.key==='Enter') sendMagicLink()" />
+      <button class="btn btn-primary login-btn" onclick="sendMagicLink()">Enviar link de acesso →</button>
+      <div class="login-msg" id="login-msg"></div>
+    </div>
+  </div>
+
   <div class="loading-overlay" id="loading-overlay">
     <div class="spinner"></div>
   </div>
@@ -600,6 +655,11 @@
       <button class="nav-item" onclick="goto('orcamento')">
         <span class="nav-icon">◎</span> Orçamento
       </button>
+      <div class="nav-logout">
+        <button class="nav-item" onclick="logout()" style="color:var(--danger)">
+          <span class="nav-icon">⎋</span> Sair
+        </button>
+      </div>
     </nav>
 
     <!-- MAIN -->
@@ -742,26 +802,92 @@
       viewYear: new Date().getFullYear()
     };
 
+    // ─── AUTH ────────────────────────────────────────────────
+    async function checkAuth() {
+      const { data: { session } } = await db.auth.getSession();
+      if (session) {
+        loadData();
+      } else {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        document.getElementById('login-screen').classList.remove('hidden');
+      }
+    }
+
+    async function sendMagicLink() {
+      const email = document.getElementById('login-email').value.trim();
+      const msg = document.getElementById('login-msg');
+      const btn = document.querySelector('.login-btn');
+      if (!email) { msg.style.color = 'var(--danger)'; msg.textContent = 'Digite seu e-mail.'; return; }
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      const { error } = await db.auth.signInWithOtp({ email });
+      btn.disabled = false; btn.textContent = 'Enviar link de acesso →';
+      if (error) {
+        msg.style.color = 'var(--danger)'; msg.textContent = error.message;
+      } else {
+        msg.style.color = 'var(--accent)';
+        msg.textContent = '✓ Link enviado! Verifique seu e-mail.';
+      }
+    }
+
+    async function logout() {
+      await db.auth.signOut();
+      state.gastos = []; state.orcamento = { ...DEFAULT_ORC };
+      document.getElementById('login-screen').classList.remove('hidden');
+    }
+
+    db.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('loading-overlay').classList.remove('hidden');
+        document.getElementById('loading-overlay').innerHTML = '<div class="spinner"></div>';
+        loadData();
+      }
+    });
+
     // ─── LOAD DATA (Supabase) ────────────────────────────────
     async function loadData() {
-      const [{ data: gastosData }, { data: orcData }] = await Promise.all([
-        db.from('gastos').select('*').order('data', { ascending: false }),
-        db.from('orcamento').select('*')
-      ]);
+      const loadEl = document.getElementById('loading-overlay');
+      loadEl.classList.remove('hidden');
 
-      if (gastosData) {
-        state.gastos = gastosData.map(r => ({
-          id: r.id, desc: r.descricao,
-          valor: parseFloat(r.valor), data: r.data,
-          categoria: r.categoria, tipo: r.tipo
-        }));
-      }
-      if (orcData) {
-        orcData.forEach(r => { if (r.categoria in state.orcamento) state.orcamento[r.categoria] = parseFloat(r.valor); });
-      }
+      const timer = setTimeout(() => {
+        loadEl.innerHTML = `
+          <div style="text-align:center">
+            <div style="font-size:1.5rem;margin-bottom:0.75rem">⚠️</div>
+            <div style="color:var(--text2);font-size:0.9rem;margin-bottom:1rem">Falha ao conectar com o servidor</div>
+            <button class="btn btn-ghost" onclick="loadData()">Tentar novamente</button>
+          </div>`;
+      }, 10000);
 
-      document.getElementById('loading-overlay').classList.add('hidden');
-      renderDash();
+      try {
+        const [{ data: gastosData, error: e1 }, { data: orcData, error: e2 }] = await Promise.all([
+          db.from('gastos').select('*').order('data', { ascending: false }),
+          db.from('orcamento').select('*')
+        ]);
+        clearTimeout(timer);
+        if (e1 || e2) throw new Error((e1 || e2).message);
+
+        if (gastosData) {
+          state.gastos = gastosData.map(r => ({
+            id: r.id, desc: r.descricao,
+            valor: parseFloat(r.valor), data: r.data,
+            categoria: r.categoria, tipo: r.tipo
+          }));
+        }
+        if (orcData) {
+          orcData.forEach(r => { if (r.categoria in state.orcamento) state.orcamento[r.categoria] = parseFloat(r.valor); });
+        }
+        loadEl.innerHTML = '<div class="spinner"></div>';
+        loadEl.classList.add('hidden');
+        renderDash();
+      } catch (err) {
+        clearTimeout(timer);
+        loadEl.innerHTML = `
+          <div style="text-align:center">
+            <div style="font-size:1.5rem;margin-bottom:0.75rem">⚠️</div>
+            <div style="color:var(--text2);font-size:0.9rem;margin-bottom:1rem">Erro: ${err.message}</div>
+            <button class="btn btn-ghost" onclick="loadData()">Tentar novamente</button>
+          </div>`;
+      }
     }
 
     // ─── NAVIGATION ──────────────────────────────────────────
@@ -1073,7 +1199,7 @@
 
     // ─── INIT ────────────────────────────────────────────────
     document.getElementById('f-data').valueAsDate = new Date();
-    loadData();
+    checkAuth();
   </script>
 </body>
 

@@ -2,6 +2,8 @@
 
 > Aplicação web para controle e acompanhamento de gastos mensais — simples, visual e direto ao ponto.
 
+🔗 **[Acesse o app →](https://gestao-de-gastos-six.vercel.app)**
+
 ---
 
 ## ✨ Funcionalidades
@@ -30,7 +32,8 @@
 - **JavaScript (Vanilla)** — sem frameworks, sem dependências de build
 - **[Chart.js 4.4](https://www.chartjs.org/)** — gráficos interativos
 - **[DM Sans + DM Serif Display](https://fonts.google.com/)** — tipografia via Google Fonts
-- **localStorage** — persistência local dos dados no navegador *(migração para Supabase planejada)*
+- **[Supabase](https://supabase.com/)** — banco de dados PostgreSQL + autenticação via magic link
+- **[Vercel](https://vercel.com/)** — deploy e hospedagem
 
 ## 🚀 Como usar
 
@@ -55,10 +58,11 @@ gestao-de-gastos/
 
 ## 🗺️ Roadmap
 
-- [ ] Migrar persistência de `localStorage` para **Supabase**
-- [ ] Autenticação de usuário
-- [ ] Publicar no **Vercel**
+- [x] Migrar persistência de `localStorage` para **Supabase**
+- [x] Autenticação via magic link (e-mail)
+- [x] Publicar no **Vercel**
 - [ ] Exportar dados em CSV
+- [ ] Confirmação antes de deletar um gasto
 - [ ] Suporte a múltiplos usuários (imóvel alugado vs. financiado)
 - [ ] Modo mobile com menu hamburguer
 
