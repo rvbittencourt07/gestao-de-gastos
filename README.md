@@ -32,7 +32,7 @@
 - **JavaScript (Vanilla)** — sem frameworks, sem dependências de build
 - **[Chart.js 4.4](https://www.chartjs.org/)** — gráficos interativos
 - **[DM Sans + DM Serif Display](https://fonts.google.com/)** — tipografia via Google Fonts
-- **[Supabase](https://supabase.com/)** — banco de dados PostgreSQL + autenticação via magic link
+- **[Supabase](https://supabase.com/)** — banco de dados PostgreSQL + autenticação via e-mail e senha
 - **[Vercel](https://vercel.com/)** — deploy e hospedagem
 
 ## 🚀 Como usar
@@ -59,7 +59,7 @@ gestao-de-gastos/
 ## 🗺️ Roadmap
 
 - [x] Migrar persistência de `localStorage` para **Supabase**
-- [x] Autenticação via magic link (e-mail)
+- [x] Autenticação via e-mail e senha
 - [x] Publicar no **Vercel**
 - [ ] Exportar dados em CSV
 - [ ] Confirmação antes de deletar um gasto

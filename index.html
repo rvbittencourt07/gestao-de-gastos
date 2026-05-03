@@ -610,7 +610,7 @@
       margin-bottom: 2rem;
     }
 
-    .login-email {
+    .login-field {
       width: 100%;
       margin-bottom: 0.75rem;
       text-align: left;
@@ -639,10 +639,12 @@
   <div class="login-screen hidden" id="login-screen">
     <div class="login-box">
       <div class="login-title">Meus <span style="color:var(--accent)">Gastos</span></div>
-      <div class="login-sub">Entre com seu e-mail para acessar</div>
-      <input class="login-email" type="email" id="login-email" placeholder="seu@email.com"
-        onkeydown="if(event.key==='Enter') sendMagicLink()" />
-      <button class="btn btn-primary login-btn" onclick="sendMagicLink()">Enviar link de acesso →</button>
+      <div class="login-sub">Entre com e-mail e senha para acessar</div>
+      <input class="login-field" type="email" id="login-email" placeholder="seu@email.com"
+        onkeydown="if(event.key==='Enter') loginWithPassword()" />
+      <input class="login-field" type="password" id="login-senha" placeholder="Senha"
+        onkeydown="if(event.key==='Enter') loginWithPassword()" />
+      <button class="btn btn-primary login-btn" id="login-btn" onclick="loginWithPassword()">Entrar →</button>
       <div class="login-msg" id="login-msg"></div>
     </div>
   </div>
@@ -829,19 +831,26 @@
       }
     }
 
-    async function sendMagicLink() {
+    async function loginWithPassword() {
       const email = document.getElementById('login-email').value.trim();
+      const senha = document.getElementById('login-senha').value;
       const msg = document.getElementById('login-msg');
-      const btn = document.querySelector('.login-btn');
-      if (!email) { msg.style.color = 'var(--danger)'; msg.textContent = 'Digite seu e-mail.'; return; }
-      btn.disabled = true; btn.textContent = 'Enviando...';
-      const { error } = await db.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-      btn.disabled = false; btn.textContent = 'Enviar link de acesso →';
+      const btn = document.getElementById('login-btn');
+      if (!email || !senha) {
+        msg.style.color = 'var(--danger)';
+        msg.textContent = 'Preencha o e-mail e a senha.';
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Entrando...';
+      const { error } = await db.auth.signInWithPassword({ email, password: senha });
+      btn.disabled = false; btn.textContent = 'Entrar →';
       if (error) {
-        msg.style.color = 'var(--danger)'; msg.textContent = error.message;
+        msg.style.color = 'var(--danger)';
+        msg.textContent = 'E-mail ou senha incorretos.';
       } else {
-        msg.style.color = 'var(--accent)';
-        msg.textContent = '✓ Link enviado! Verifique seu e-mail.';
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('loading-overlay').classList.remove('hidden');
+        loadData();
       }
     }
 
@@ -850,15 +859,6 @@
       state.gastos = []; state.orcamento = { ...DEFAULT_ORC };
       document.getElementById('login-screen').classList.remove('hidden');
     }
-
-    db.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('loading-overlay').classList.remove('hidden');
-        document.getElementById('loading-overlay').innerHTML = '<div class="spinner"></div>';
-        loadData();
-      }
-    });
 
     // ─── LOAD DATA (Supabase) ────────────────────────────────
     async function loadData() {
