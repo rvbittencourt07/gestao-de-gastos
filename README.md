@@ -23,7 +23,7 @@
 | 🛒 Alimentação | | 🚗 Transporte | |
 | 🧴 Higiene & Limpeza | | 🏥 Saúde | |
 | 🎮 Lazer | | 💰 Reserva | |
-| 📦 Outros | | | |
+| 🐾 Petz | | 📦 Outros | | 
 
 ## 🛠️ Tecnologias
 

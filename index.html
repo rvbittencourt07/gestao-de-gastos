@@ -720,6 +720,20 @@
           <div class="page-title">Histórico</div>
           <div class="page-sub">Todos os lançamentos registrados</div>
         </div>
+
+        <!-- Filtros -->
+        <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; margin-bottom:1rem;">
+          <div style="position:relative; flex:1; min-width:200px; max-width:340px;">
+            <span
+              style="position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); color:var(--text3); font-size:0.9rem; pointer-events:none;">🔍</span>
+            <input type="text" id="hist-search" placeholder="Buscar por descrição…" oninput="renderHistorico()"
+              style="width:100%; padding-left:2.2rem;" />
+          </div>
+          <div id="cat-filter-chips" style="display:flex; flex-wrap:wrap; gap:0.4rem;"></div>
+          <button class="btn btn-ghost" onclick="clearHistFilters()"
+            style="font-size:0.8rem; padding:0.45rem 0.9rem;">Limpar filtros</button>
+        </div>
+
         <div class="panel">
           <div id="historico-content"></div>
         </div>
@@ -757,6 +771,7 @@
                 <option value="Saúde">🏥 Saúde</option>
                 <option value="Lazer">🎮 Lazer</option>
                 <option value="Reserva">💰 Reserva</option>
+                <option value="Petz">🐾 Petz</option>
                 <option value="Outros">📦 Outros</option>
               </select>
             </div>
@@ -803,14 +818,14 @@
     );
 
     // ─── STATE ───────────────────────────────────────────────
-    const CATS = ['Moradia', 'Contas fixas', 'Alimentação', 'Transporte', 'Higiene', 'Saúde', 'Lazer', 'Reserva', 'Outros'];
-    const CAT_ICONS = { 'Moradia': '🏠', 'Contas fixas': '💡', 'Alimentação': '🛒', 'Transporte': '🚗', 'Higiene': '🧴', 'Saúde': '🏥', 'Lazer': '🎮', 'Reserva': '💰', 'Outros': '📦' };
+    const CATS = ['Moradia', 'Contas fixas', 'Alimentação', 'Transporte', 'Higiene', 'Saúde', 'Lazer', 'Reserva', 'Petz', 'Outros'];
+    const CAT_ICONS = { 'Moradia': '🏠', 'Contas fixas': '💡', 'Alimentação': '🛒', 'Transporte': '🚗', 'Higiene': '🧴', 'Saúde': '🏥', 'Lazer': '🎮', 'Reserva': '💰', 'Petz': '🐾', 'Outros': '📦' };
     const CAT_COLORS = ['#c8f57a', '#7ab8f5', '#f5c842', '#f97575', '#a78bfa', '#34d399', '#f97316', '#e879f9', '#94a3b8'];
 
     const DEFAULT_ORC = {
       'Moradia': 0, 'Contas fixas': 0, 'Alimentação': 0,
       'Transporte': 0, 'Higiene': 0, 'Saúde': 0,
-      'Lazer': 0, 'Reserva': 0, 'Outros': 0
+      'Lazer': 0, 'Reserva': 0, 'Petz': 0, 'Outros': 0
     };
 
     let state = {
@@ -1071,20 +1086,68 @@
     }
 
     // ─── HISTORICO ───────────────────────────────────────────
+    let histFilterCat = null;
+
+    function buildCatChips() {
+      const wrap = document.getElementById('cat-filter-chips');
+      if (!wrap) return;
+      const used = CATS.filter(c => state.gastos.some(g => g.categoria === c));
+      wrap.innerHTML = used.map(c => {
+        const active = histFilterCat === c;
+        const col = CAT_COLORS[CATS.indexOf(c)];
+        return `<button onclick="toggleCatFilter('${c}')" style="
+          font-size:0.75rem; padding:0.3rem 0.75rem; border-radius:20px; border:1px solid;
+          cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s;
+          background:${active ? col + '22' : 'var(--bg3)'};
+          color:${active ? col : 'var(--text2)'};
+          border-color:${active ? col + '66' : 'var(--border)'};
+        ">${CAT_ICONS[c] || ''} ${c}</button>`;
+      }).join('');
+    }
+
+    function toggleCatFilter(cat) {
+      histFilterCat = histFilterCat === cat ? null : cat;
+      renderHistorico();
+    }
+
+    function clearHistFilters() {
+      histFilterCat = null;
+      const s = document.getElementById('hist-search');
+      if (s) s.value = '';
+      renderHistorico();
+    }
+
     function renderHistorico() {
-      const sorted = [...state.gastos].sort((a, b) => new Date(b.data) - new Date(a.data));
+      buildCatChips();
+      const searchTerm = (document.getElementById('hist-search')?.value || '').trim().toLowerCase();
+      let list = [...state.gastos].sort((a, b) => new Date(b.data) - new Date(a.data));
+
+      if (histFilterCat) list = list.filter(g => g.categoria === histFilterCat);
+      if (searchTerm) list = list.filter(g => g.desc.toLowerCase().includes(searchTerm));
+
       const el = document.getElementById('historico-content');
-      if (!sorted.length) {
+      const totalFiltrado = list.reduce((s, g) => s + g.valor, 0);
+
+      if (!state.gastos.length) {
         el.innerHTML = `<div class="empty"><div class="empty-icon">◌</div><div class="empty-text">Nenhum gasto registrado ainda.</div></div>`;
         return;
       }
+      if (!list.length) {
+        el.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nenhum resultado para esse filtro.</div></div>`;
+        return;
+      }
+
       el.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; font-size:0.82rem; color:var(--text2);">
+      <span>${list.length} lançamento${list.length !== 1 ? 's' : ''}</span>
+      <span style="font-weight:600; color:var(--danger)">Total: R$ ${fmt(totalFiltrado)}</span>
+    </div>
     <table class="data-table">
       <thead><tr>
         <th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th style="text-align:right">Valor</th><th></th>
       </tr></thead>
       <tbody>
-        ${sorted.map(g => `
+        ${list.map(g => `
           <tr>
             <td style="color:var(--text2); font-size:0.8rem">${fmtDate(g.data)}</td>
             <td>${g.desc}</td>
