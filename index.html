@@ -707,9 +707,14 @@
             <div class="panel-title">Orçado vs. Real</div>
             <div class="chart-wrap"><canvas id="chart-orc"></canvas></div>
           </div>
-          <div class="panel panel-full">
+          <div class="panel">
             <div class="panel-title">Evolução mensal</div>
-            <div class="chart-wrap" style="height:180px"><canvas id="chart-line"></canvas></div>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-line"></canvas></div>
+          </div>
+          <!-- MATRIZ orçado / real / desvio -->
+          <div class="panel" id="panel-matrix">
+            <div class="panel-title">Detalhamento por categoria</div>
+            <div id="dash-matrix"></div>
           </div>
         </div>
       </section>
@@ -1054,35 +1059,120 @@
         });
       }
 
-      // Chart: evolução linha (últimos 6 meses) — só plota meses com dados
-      const months = [];
-      for (let i = 5; i >= 0; i--) {
+      // Chart: evolução linha — últimos 5 meses com real != 0
+      const allMonths = [];
+      for (let i = 4; i >= 0; i--) {
         let m = state.viewMonth - i, y = state.viewYear;
         if (m < 0) { m += 12; y--; }
-        months.push({ m, y, label: MONTHS_PT[m].slice(0, 3) });
+        allMonths.push({ m, y, label: MONTHS_PT[m].slice(0, 3) });
       }
+      const activeMonths = allMonths.filter(x => gastosMes(x.m, x.y).reduce((s, g) => s + g.valor, 0) > 0);
       const ctx3 = document.getElementById('chart-line').getContext('2d');
       if (chartLine) chartLine.destroy();
-      chartLine = new Chart(ctx3, {
-        type: 'line',
-        data: {
-          labels: months.map(x => x.label + '/' + String(x.y).slice(-2)),
-          datasets: [{
-            label: 'Total gasto',
-            data: months.map(x => gastosMes(x.m, x.y).reduce((s, g) => s + g.valor, 0)),
-            borderColor: '#c8f57a', backgroundColor: 'rgba(200,245,122,0.06)',
-            borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#c8f57a', fill: true, tension: 0.35
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` R$ ${fmt(ctx.raw)}` } } },
-          scales: {
-            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a5854', font: { size: 10 } } },
-            y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a5854', font: { size: 10 }, callback: v => 'R$' + (v / 1000).toFixed(1) + 'k' } }
+      if (!activeMonths.length) {
+        ctx3.clearRect(0, 0, ctx3.canvas.width, ctx3.canvas.height);
+        ctx3.fillStyle = '#5a5854';
+        ctx3.font = '13px DM Sans, sans-serif';
+        ctx3.textAlign = 'center';
+        ctx3.fillText('Nenhum dado nos últimos 5 meses', ctx3.canvas.width / 2, 110);
+        chartLine = null;
+      } else {
+        chartLine = new Chart(ctx3, {
+          type: 'line',
+          data: {
+            labels: activeMonths.map(x => x.label + '/' + String(x.y).slice(-2)),
+            datasets: [{
+              label: 'Total gasto',
+              data: activeMonths.map(x => gastosMes(x.m, x.y).reduce((s, g) => s + g.valor, 0)),
+              borderColor: '#c8f57a', backgroundColor: 'rgba(200,245,122,0.06)',
+              borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#c8f57a', fill: true, tension: 0.35
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` R$ ${fmt(ctx.raw)}` } } },
+            scales: {
+              x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a5854', font: { size: 10 } } },
+              y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a5854', font: { size: 10 }, callback: v => 'R$' + (v / 1000).toFixed(1) + 'k' } }
+            }
           }
-        }
-      });
+        });
+      }
+
+      // Matriz: orçado / real / desvio por categoria
+      renderMatrix(gs);
+    }
+
+    // ─── MATRIZ ──────────────────────────────────────────────
+    const matrixExpanded = new Set();
+
+    function toggleMatrixRow(cat) {
+      matrixExpanded.has(cat) ? matrixExpanded.delete(cat) : matrixExpanded.add(cat);
+      const gs = gastosMes(state.viewMonth, state.viewYear);
+      renderMatrix(gs);
+    }
+
+    function renderMatrix(gs) {
+      const el = document.getElementById('dash-matrix');
+      if (!el) return;
+
+      // Só categorias com orçamento OU com gasto real
+      const rows = CATS.map(c => {
+        const orc = state.orcamento[c] || 0;
+        const items = gs.filter(g => g.categoria === c);
+        const real = items.reduce((s, g) => s + g.valor, 0);
+        return { cat: c, orc, real, items };
+      }).filter(r => r.orc > 0 || r.real > 0);
+
+      if (!rows.length) {
+        el.innerHTML = `<div style="font-size:0.82rem; color:var(--text3); padding:0.5rem 0;">Sem dados para o mês selecionado.</div>`;
+        return;
+      }
+
+      const hdr = `
+        <div style="display:grid; grid-template-columns:1fr repeat(3,100px); gap:0; font-size:0.68rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--text3); padding:0 0 0.5rem; border-bottom:1px solid var(--border);">
+          <span>Categoria</span>
+          <span style="text-align:right">Orçado</span>
+          <span style="text-align:right">Real</span>
+          <span style="text-align:right">Desvio</span>
+        </div>`;
+
+      const bodyRows = rows.map(r => {
+        const desvio = r.real - r.orc;
+        const devColor = desvio > 0 ? 'var(--danger)' : desvio < 0 ? 'var(--accent)' : 'var(--text2)';
+        const devSign = desvio > 0 ? '+' : '';
+        const isOpen = matrixExpanded.has(r.cat);
+        const col = CAT_COLORS[CATS.indexOf(r.cat)];
+        const hasItems = r.items.length > 0;
+
+        const parentRow = `
+          <div onclick="${hasItems ? `toggleMatrixRow('${r.cat}')` : ''}" style="
+            display:grid; grid-template-columns:1fr repeat(3,100px); gap:0;
+            padding:0.55rem 0; border-bottom:1px solid var(--border);
+            cursor:${hasItems ? 'pointer' : 'default'};
+            transition: background 0.1s;
+          " onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+            <span style="display:flex; align-items:center; gap:0.4rem; font-size:0.82rem; font-weight:600; color:var(--text);">
+              <span style="font-size:0.65rem; color:var(--text3); width:12px; text-align:center; transition:transform 0.2s; transform:${isOpen ? 'rotate(45deg)' : 'rotate(0)'}">${hasItems ? '＋' : '·'}</span>
+              <span style="color:${col}">${CAT_ICONS[r.cat] || ''}</span> ${r.cat}
+            </span>
+            <span style="text-align:right; font-size:0.82rem; color:var(--text2)">${r.orc > 0 ? 'R$\u00a0' + fmt(r.orc) : '—'}</span>
+            <span style="text-align:right; font-size:0.82rem; color:var(--text)">${r.real > 0 ? 'R$\u00a0' + fmt(r.real) : '—'}</span>
+            <span style="text-align:right; font-size:0.82rem; color:${devColor}">${r.orc === 0 ? '—' : devSign + 'R$\u00a0' + fmt(Math.abs(desvio))}</span>
+          </div>`;
+
+        const childRows = isOpen ? r.items.map(g => `
+          <div style="display:grid; grid-template-columns:1fr repeat(3,100px); padding:0.35rem 0 0.35rem 1.4rem; border-bottom:1px solid var(--border); background:var(--bg);">
+            <span style="font-size:0.78rem; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${g.desc}</span>
+            <span style="text-align:right; font-size:0.78rem; color:var(--text3)">—</span>
+            <span style="text-align:right; font-size:0.78rem; color:var(--text)">R$\u00a0${fmt(g.valor)}</span>
+            <span style="text-align:right; font-size:0.78rem; color:var(--text3)">—</span>
+          </div>`).join('') : '';
+
+        return parentRow + childRows;
+      }).join('');
+
+      el.innerHTML = hdr + `<div>${bodyRows}</div>`;
     }
 
     // ─── HISTORICO ───────────────────────────────────────────
