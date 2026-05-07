@@ -1037,6 +1037,25 @@
     // ─── DASHBOARD ───────────────────────────────────────────
     let chartCat, chartOrc, chartLine;
 
+    function calcPoupado() {
+      // Agrupa lançamentos da categoria Reserva por mês
+      const meses = {};
+      state.gastos.filter(g => g.categoria === 'Reserva').forEach(g => {
+        const d = new Date(g.data + 'T00:00:00');
+        const key = d.getFullYear() + '-' + d.getMonth();
+        if (!meses[key]) meses[key] = { m: d.getMonth(), y: d.getFullYear(), total: 0 };
+        meses[key].total += g.valor;
+      });
+      let poupado = 0;
+      let melhorMes = null;
+      let melhorVal = -Infinity;
+      Object.values(meses).forEach(({ m, y, total }) => {
+        poupado += total;
+        if (total > melhorVal) { melhorVal = total; melhorMes = { m, y, val: total }; }
+      });
+      return { poupado, melhorMes, melhorVal };
+    }
+
     function renderDash() {
       document.getElementById('month-label').textContent = getViewLabel();
       const gs = gastosMes(state.viewMonth, state.viewYear);
@@ -1044,19 +1063,25 @@
       const orcTotal = Object.values(state.orcamento).reduce((a, b) => a + b, 0);
       const saldo = orcTotal - total;
       const maisCaro = gs.length ? gs.reduce((a, b) => a.valor > b.valor ? a : b) : null;
+      const { poupado, melhorMes } = calcPoupado();
 
-      // Stat cards
+      // Stat cards — ordem: Saldo orçamento | Gasto no mês | Poupado no total | Maior gasto | Média diária
       document.getElementById('stat-cards').innerHTML = `
-    <div class="stat-card red">
-      <div class="stat-label">Gasto no mês</div>
-      <div class="stat-value red">R$ ${fmt(total)}</div>
-      <div class="stat-sub">${gs.length} lançamento${gs.length !== 1 ? 's' : ''}</div>
-    </div>
     <div class="stat-card ${orcTotal === 0 ? 'blue' : saldo >= 0 ? 'green' : 'red'}">
       <div class="stat-label">Saldo do orçamento</div>
       <div class="stat-value ${orcTotal === 0 ? '' : saldo >= 0 ? 'green' : 'red'}" style="${orcTotal === 0 ? 'color:var(--text2)' : ''}">${orcTotal === 0 ? '—' : (saldo >= 0 ? '+' : '') + 'R$ ' + fmt(saldo)}</div>
       <div class="stat-sub">${orcTotal === 0 ? 'Orçamento não definido' : 'Orçado: R$ ' + fmt(orcTotal)}</div>
       ${orcTotal > 0 ? `<div class="progress-bar-wrap" style="margin-top:0.75rem"><div class="progress-bar" style="width:${Math.min(100, (total / orcTotal) * 100)}%; background: ${saldo >= 0 ? 'var(--accent)' : 'var(--danger)'}"></div></div>` : ''}
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Gasto no mês</div>
+      <div class="stat-value red">R$ ${fmt(total)}</div>
+      <div class="stat-sub">${gs.length} lançamento${gs.length !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Poupado no total</div>
+      <div class="stat-value green">R$ ${fmt(poupado)}</div>
+      <div class="stat-sub">${melhorMes && melhorMes.val > 0 ? 'Melhor: ' + MONTHS_PT[melhorMes.m].slice(0,3) + ' ' + melhorMes.y + ' • R$ ' + fmt(melhorMes.val) : 'Nenhum mês positivo ainda'}</div>
     </div>
     <div class="stat-card amber">
       <div class="stat-label">Maior gasto</div>
@@ -1432,7 +1457,9 @@
 
       btn.disabled = false;
       if (error) {
+        console.error('Erro saveOrc:', error);
         btn.textContent = '✕ Erro ao salvar'; btn.style.background = 'var(--danger)';
+        alert('Erro ao salvar: ' + error.message + '\nCódigo: ' + error.code);
       } else {
         btn.textContent = '✓ Salvo!'; btn.style.background = 'var(--accent2)';
       }
