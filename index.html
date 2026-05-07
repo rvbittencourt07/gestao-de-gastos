@@ -1425,8 +1425,10 @@
       const { data: { session } } = await db.auth.getSession();
       const user_id = session?.user?.id;
 
+      // Delete existing rows for this user then re-insert
+      await db.from('orcamento').delete().eq('user_id', user_id);
       const { error } = await db.from('orcamento')
-        .upsert(CATS.map(c => ({ categoria: c, valor: state.orcamento[c], user_id })), { onConflict: 'categoria,user_id' });
+        .insert(CATS.map(c => ({ categoria: c, valor: state.orcamento[c], user_id })));
 
       btn.disabled = false;
       if (error) {
