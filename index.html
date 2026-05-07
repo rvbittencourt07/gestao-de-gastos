@@ -1347,9 +1347,12 @@
 
       btn.disabled = true; btn.textContent = 'Salvando...';
 
+      const { data: { session } } = await db.auth.getSession();
+      const user_id = session?.user?.id;
+
       const { data: inserted, error } = await db
         .from('gastos')
-        .insert([{ descricao: desc, valor, data, categoria, tipo }])
+        .insert([{ descricao: desc, valor, data, categoria, tipo, user_id }])
         .select().single();
 
       btn.disabled = false; btn.textContent = 'Registrar gasto →';
@@ -1419,8 +1422,11 @@
       const btn = event.currentTarget;
       btn.textContent = 'Salvando...'; btn.disabled = true;
 
+      const { data: { session } } = await db.auth.getSession();
+      const user_id = session?.user?.id;
+
       const { error } = await db.from('orcamento')
-        .upsert(CATS.map(c => ({ categoria: c, valor: state.orcamento[c] })), { onConflict: 'categoria' });
+        .upsert(CATS.map(c => ({ categoria: c, valor: state.orcamento[c], user_id })), { onConflict: 'categoria,user_id' });
 
       btn.disabled = false;
       if (error) {
