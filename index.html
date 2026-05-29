@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meus gastos mensais</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f0e0c'/%3E%3Crect x='5' y='18' width='6' height='9' rx='2' fill='%23c8f57a' opacity='0.5'/%3E%3Crect x='13' y='12' width='6' height='15' rx='2' fill='%23c8f57a' opacity='0.75'/%3E%3Crect x='21' y='6' width='6' height='21' rx='2' fill='%23c8f57a'/%3E%3Cline x1='3' y1='28' x2='29' y2='28' stroke='%23c8f57a' stroke-width='1.5' opacity='0.3'/%3E%3C/svg%3E">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <link
@@ -692,6 +693,13 @@
   <!-- LOGIN SCREEN -->
   <div class="login-screen hidden" id="login-screen">
     <div class="login-box">
+      <svg width="48" height="48" viewBox="0 0 36 36" style="display:block; margin: 0 auto 1rem;">
+        <rect width="36" height="36" rx="8" fill="#c8f57a" opacity="0.1"/>
+        <rect x="5" y="20" width="7" height="11" rx="2" fill="#c8f57a" opacity="0.5"/>
+        <rect x="14.5" y="13" width="7" height="18" rx="2" fill="#c8f57a" opacity="0.75"/>
+        <rect x="24" y="6" width="7" height="25" rx="2" fill="#c8f57a"/>
+        <line x1="3" y1="32" x2="33" y2="32" stroke="#c8f57a" stroke-width="1.5" opacity="0.3"/>
+      </svg>
       <div class="login-title">Meus <span style="color:var(--accent)">Gastos</span></div>
       <div class="login-sub">Entre com e-mail e senha para acessar</div>
       <input class="login-field" type="email" id="login-email" placeholder="seu@email.com"
@@ -710,7 +718,16 @@
 
     <!-- SIDEBAR (desktop) -->
     <nav class="sidebar">
-      <div class="logo">Meus<br><span>Gastos</span></div>
+      <div class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" style="display:block; margin-bottom: 0.5rem;">
+          <rect width="36" height="36" rx="8" fill="#c8f57a" opacity="0.1"/>
+          <rect x="5" y="20" width="7" height="11" rx="2" fill="#c8f57a" opacity="0.5"/>
+          <rect x="14.5" y="13" width="7" height="18" rx="2" fill="#c8f57a" opacity="0.75"/>
+          <rect x="24" y="6" width="7" height="25" rx="2" fill="#c8f57a"/>
+          <line x1="3" y1="32" x2="33" y2="32" stroke="#c8f57a" stroke-width="1.5" opacity="0.3"/>
+        </svg>
+        Meus<br><span>Gastos</span>
+      </div>
 
       <div class="nav-section">Visão Geral</div>
       <button class="nav-item active" onclick="goto('dashboard')">
@@ -1037,25 +1054,6 @@
     // ─── DASHBOARD ───────────────────────────────────────────
     let chartCat, chartOrc, chartLine;
 
-    function calcPoupado() {
-      // Agrupa lançamentos da categoria Reserva por mês
-      const meses = {};
-      state.gastos.filter(g => g.categoria === 'Reserva').forEach(g => {
-        const d = new Date(g.data + 'T00:00:00');
-        const key = d.getFullYear() + '-' + d.getMonth();
-        if (!meses[key]) meses[key] = { m: d.getMonth(), y: d.getFullYear(), total: 0 };
-        meses[key].total += g.valor;
-      });
-      let poupado = 0;
-      let melhorMes = null;
-      let melhorVal = -Infinity;
-      Object.values(meses).forEach(({ m, y, total }) => {
-        poupado += total;
-        if (total > melhorVal) { melhorVal = total; melhorMes = { m, y, val: total }; }
-      });
-      return { poupado, melhorMes, melhorVal };
-    }
-
     function renderDash() {
       document.getElementById('month-label').textContent = getViewLabel();
       const gs = gastosMes(state.viewMonth, state.viewYear);
@@ -1063,25 +1061,19 @@
       const orcTotal = Object.values(state.orcamento).reduce((a, b) => a + b, 0);
       const saldo = orcTotal - total;
       const maisCaro = gs.length ? gs.reduce((a, b) => a.valor > b.valor ? a : b) : null;
-      const { poupado, melhorMes } = calcPoupado();
 
-      // Stat cards — ordem: Saldo orçamento | Gasto no mês | Poupado no total | Maior gasto | Média diária
+      // Stat cards
       document.getElementById('stat-cards').innerHTML = `
-    <div class="stat-card ${orcTotal === 0 ? 'blue' : saldo >= 0 ? 'green' : 'red'}">
-      <div class="stat-label">Saldo do orçamento</div>
-      <div class="stat-value ${orcTotal === 0 ? '' : saldo >= 0 ? 'green' : 'red'}" style="${orcTotal === 0 ? 'color:var(--text2)' : ''}">${orcTotal === 0 ? '—' : (saldo >= 0 ? '+' : '') + 'R$ ' + fmt(saldo)}</div>
-      <div class="stat-sub">${orcTotal === 0 ? 'Orçamento não definido' : 'Orçado: R$ ' + fmt(orcTotal)}</div>
-      ${orcTotal > 0 ? `<div class="progress-bar-wrap" style="margin-top:0.75rem"><div class="progress-bar" style="width:${Math.min(100, (total / orcTotal) * 100)}%; background: ${saldo >= 0 ? 'var(--accent)' : 'var(--danger)'}"></div></div>` : ''}
-    </div>
     <div class="stat-card red">
       <div class="stat-label">Gasto no mês</div>
       <div class="stat-value red">R$ ${fmt(total)}</div>
       <div class="stat-sub">${gs.length} lançamento${gs.length !== 1 ? 's' : ''}</div>
     </div>
-    <div class="stat-card green">
-      <div class="stat-label">Poupado no total</div>
-      <div class="stat-value green">R$ ${fmt(poupado)}</div>
-      <div class="stat-sub">${melhorMes && melhorMes.val > 0 ? 'Melhor: ' + MONTHS_PT[melhorMes.m].slice(0,3) + ' ' + melhorMes.y + ' • R$ ' + fmt(melhorMes.val) : 'Nenhum mês positivo ainda'}</div>
+    <div class="stat-card ${orcTotal === 0 ? 'blue' : saldo >= 0 ? 'green' : 'red'}">
+      <div class="stat-label">Saldo do orçamento</div>
+      <div class="stat-value ${orcTotal === 0 ? '' : saldo >= 0 ? 'green' : 'red'}" style="${orcTotal === 0 ? 'color:var(--text2)' : ''}">${orcTotal === 0 ? '—' : (saldo >= 0 ? '+' : '') + 'R$ ' + fmt(saldo)}</div>
+      <div class="stat-sub">${orcTotal === 0 ? 'Orçamento não definido' : 'Orçado: R$ ' + fmt(orcTotal)}</div>
+      ${orcTotal > 0 ? `<div class="progress-bar-wrap" style="margin-top:0.75rem"><div class="progress-bar" style="width:${Math.min(100, (total / orcTotal) * 100)}%; background: ${saldo >= 0 ? 'var(--accent)' : 'var(--danger)'}"></div></div>` : ''}
     </div>
     <div class="stat-card amber">
       <div class="stat-label">Maior gasto</div>
@@ -1372,12 +1364,9 @@
 
       btn.disabled = true; btn.textContent = 'Salvando...';
 
-      const { data: { session } } = await db.auth.getSession();
-      const user_id = session?.user?.id;
-
       const { data: inserted, error } = await db
         .from('gastos')
-        .insert([{ descricao: desc, valor, data, categoria, tipo, user_id }])
+        .insert([{ descricao: desc, valor, data, categoria, tipo }])
         .select().single();
 
       btn.disabled = false; btn.textContent = 'Registrar gasto →';
@@ -1447,19 +1436,12 @@
       const btn = event.currentTarget;
       btn.textContent = 'Salvando...'; btn.disabled = true;
 
-      const { data: { session } } = await db.auth.getSession();
-      const user_id = session?.user?.id;
-
-      // Delete existing rows for this user then re-insert
-      await db.from('orcamento').delete().eq('user_id', user_id);
       const { error } = await db.from('orcamento')
-        .insert(CATS.map(c => ({ categoria: c, valor: state.orcamento[c], user_id })));
+        .upsert(CATS.map(c => ({ categoria: c, valor: state.orcamento[c] })), { onConflict: 'categoria' });
 
       btn.disabled = false;
       if (error) {
-        console.error('Erro saveOrc:', error);
         btn.textContent = '✕ Erro ao salvar'; btn.style.background = 'var(--danger)';
-        alert('Erro ao salvar: ' + error.message + '\nCódigo: ' + error.code);
       } else {
         btn.textContent = '✓ Salvo!'; btn.style.background = 'var(--accent2)';
       }

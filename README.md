@@ -8,6 +8,7 @@
 
 ## ✨ Funcionalidades
 
+- **Identidade visual** — logo SVG personalizada (gráfico de barras verde-lima) exibida na tela de login, na sidebar e como favicon da aba do navegador
 - **Dashboard** — visão geral do mês com cards de resumo (total gasto, saldo do orçamento, maior gasto e média diária)
 - **Gráficos interativos** — gastos por categoria, orçado vs. real e evolução mensal dos últimos 5 meses com dados reais
 - **Detalhamento por categoria** — matriz expansível com colunas Orçado / Real / Desvio; clique em uma categoria para ver cada lançamento individualmente
@@ -67,6 +68,7 @@ gestao-de-gastos/
 - [x] Detalhamento por categoria com matriz orçado/real/desvio
 - [x] Suporte mobile com bottom navigation bar
 - [x] Categoria **Petz** 🐾
+- [x] Identidade visual com logo e favicon personalizados
 - [ ] Exportar dados em CSV
 - [ ] Confirmação antes de deletar um gasto
 - [ ] Suporte a múltiplos usuários (imóvel alugado vs. financiado)
